@@ -1,0 +1,16 @@
+######################################################################
+#  Project Makefile
+######################################################################
+
+BINARY		= logger
+SRCFILES	= logger.c debug.c w25q_msc.c usb_conf.c cdc.c msc.c backup.c ramdisk.c winbond.c
+LDSCRIPT	= ../stm32f103c8t6.ld
+
+# DEPS		= 	# Any additional dependencies for your build
+# CLOBBER	+= 	# Any additional files to be removed with "make clobber"
+
+SEMIHOSTING	= 1
+OOCD_BOARD	?= target/stm32f1x.cfg
+
+include ../Makefile.include
+######################################################################
