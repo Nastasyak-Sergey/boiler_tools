@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, serial,serial.tools.list_ports, time, threading
+import sys, serial, serial.tools.list_ports, time, threading
 from datetime import datetime
 
 try:
