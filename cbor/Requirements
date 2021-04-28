@@ -1,0 +1,23 @@
+
+
+
+Links:
+
+CBOR online decoder:
+http://cbor.me/?diag=
+
+
+A constrained node implementation of CBOR in C
+https://github.com/jimsch/cn-cbor
+
+RFC 8949
+Concise Binary Object Representation (CBOR)
+https://www.rfc-editor.org/rfc/rfc8949
+
+
+Other links
+https://github.com/icsiii/embedded-abstract-message/tree/master/vendor/tinycbor/examples
+https://github.com/ARMmbed/suit-manifest-generator/tree/master/parser_examples
+
+EDGE impuls
+https://docs.edgeimpulse.com/reference#data-acquisition-format 

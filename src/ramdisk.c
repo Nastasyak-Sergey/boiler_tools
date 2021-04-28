@@ -19,6 +19,7 @@
  */
 
 #include <string.h>
+#include <stdint.h>
 #include "ramdisk.h"
 
 #define WBVAL(x) ((x) & 0xFF), (((x) >> 8) & 0xFF)

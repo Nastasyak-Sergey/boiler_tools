@@ -3,22 +3,29 @@ TARGET = logger
 # All source files go here:
 SRCS = $(TARGET).c
 # other sources added like that
-SRCS += logger.c debug.c w25q_msc.c usb_conf.c msc.c cdc.c backup.c ramdisk.c winbond.c 
+SRCS += irq.c rtc.c one_wire.c ds18b20.c debug.c common.c  board.c backup.c
+SRCS += usb_conf.c msc.c cdc.c ramdisk.c
+
+
 # User defines
-DEFINES = 
+DEFINES =
 # The libs which are linked to the resulting target
 LIBS = -Wl,--start-group -lc -lgcc -Wl,--end-group
 LIBS += -lopencm3
 LIBS += -lprintf
-LIBS += -lm
+#LIBS += -lm
 
 # Possible values: debug, release
 PROFILE = debug
-
 # Use semihosting or not. Possible values: 0, 1
 # Semihosting allows to pass printf() output and whole files between MCU and PC
 # but the built target will not work without debugger connected
-SEMIHOSTING ?= 1
+SEMIHOSTING ?= 0
+
+# Be silent per default, but 'make V=1' will show all compiler calls.
+ifneq ($(V),1) # 1
+  Q		:= @
+endif
 
 # Optimization flags for debug build:
 #   -Og -- optimize for debugging
@@ -40,10 +47,8 @@ EXTRAFLAGS += -finput-charset=UTF-8 -fexec-charset=cp1251
 # Device is required for libopencm3
 DEVICE ?= stm32f103c8t6
 # Possible values: soft, hard
-FPU ?= soft 
-# check below
-#FPU_FLAGS := -mfpu=fpv4-sp-d16 -mfloat-abi=$(FPU)
-FPU_FLAGS := -mfloat-abi=$(FPU)
+FPU ?= soft
+FPU_FLAGS := -mfloat-abi=$(FPU) -msoft-float
 # We want it built only for one MCU family to reduce build time
 # See libopencm3 Makefile for details
 LIBOPENCM3_TARGET ?= stm32/f1
@@ -66,10 +71,12 @@ CFLAGS += -fdata-sections -ffunction-sections
 CFLAGS += -DUSE_SEMIHOSTING=$(SEMIHOSTING)
 CFLAGS += $(addprefix -D,$(DEFINES)) $(genlink_cppflags) $(EXTRAFLAGS)
 
-LDFLAGS := $(ARCHFLAGS) --static -nostartfiles 
+LDFLAGS := $(ARCHFLAGS) --static -nostartfiles
+LDFLAGS += -Wl,-Map=$(BUILD_DIR)/$(PROFILE)/$(TARGET).map
+#LDFLAGS += -nostdlib
 
 ifeq ("$(SEMIHOSTING)","1")
-LDFLAGS += --specs=rdimon.specs -lrdimon -lnosys #-lnosys
+LDFLAGS += --specs=rdimon.specs -lrdimon
 else
 LDFLAGS += -lnosys
 endif
@@ -89,9 +96,10 @@ CPP = $(TOOLCHAIN_PREFIX)g++
 # Change to assembler-with-cpp if also using C++
 AS = $(TOOLCHAIN_PREFIX)gcc -x assembler
 CP = $(TOOLCHAIN_PREFIX)objcopy
-SZ = $(TOOLCHAIN_PREFIX)size # -G -d
+SZ = $(TOOLCHAIN_PREFIX)size -d
 GDB = $(TOOLCHAIN_PREFIX)gdb
-OOCD ?= openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg -c "adapter_khz 1800; transport select hla_swd; reset_config srst_only "#srst_nogate
+OOCD ?= openocd -f interface/stlink-v2.cfg -f target/stm32f1x.cfg
+
 HEX = $(CP) -O ihex -S
 BIN = $(CP) -O binary -S
 
@@ -130,7 +138,7 @@ $(BUILD_DIR)/$(PROFILE)/libprintf.a: $(OBJDIR) | $(OBJDIR)/libprintf.o
 
 $(BUILD_DIR)/$(PROFILE)/obj/libprintf.o: $(LIB_DIR)/libprintf/printf.c
 	@echo Building libprintf...
-	$(CC) $(CFLAGS) $(INCS) -DPRINTF_INCLUDE_CONFIG_H -c $< -o $@
+	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
 
 
 # Means that this target will trigger PROFILE change to release
@@ -156,33 +164,32 @@ include $(OPENCM3_DIR)/mk/genlink-rules.mk
 
 ## Recipe for building project object files, placed in separate directory
 $(OBJDIR)/%.o: $(SRC_DIR)/%.c | $(OBJDIR) $(BUILD_DIR)/$(PROFILE)/libopencm3.a
-	$(CC) $(CFLAGS) $(INCS) -c $< -o $@ 
+	$(Q)$(CC) $(CFLAGS) $(INCS) -c $< -o $@
 
 ## Recipe for elf file, that is used for flashing and debugging, can be converted to bin/hex form
 $(BUILD_DIR)/$(PROFILE)/$(TARGET).elf: $(addprefix $(OBJDIR)/,$(OBJECTS)) | \
 $(BUILD_DIR)/$(PROFILE)/libopencm3.a \
 $(LDSCRIPT)
-	$(CC) -T$(LDSCRIPT) $^ $(LDFLAGS) -o $@
+	$(Q)$(CC) -T$(LDSCRIPT) $^ $(LDFLAGS) -o $@
 	@echo
 	$(SZ) $@
 	@echo
 
 ## Generate .bin firmware from .elf
 $(BUILD_DIR)/$(PROFILE)/$(TARGET).bin: $(BUILD_DIR)/$(PROFILE)/$(TARGET).elf
-	$(BIN) $< $@
+	$(Q)$(BIN) $< $@
 
 ## Generate .hex firmware from .elf
 $(BUILD_DIR)/$(PROFILE)/$(TARGET).hex: $(BUILD_DIR)/$(PROFILE)/$(TARGET).elf
-	$(HEX) $< $@
+	$(Q)$(HEX) $< $@
 
 ## Flash MCU with currently built firmware
 flash: $(BUILD_DIR)/$(PROFILE)/$(TARGET).elf
 	$(OOCD) -c "program $< verify reset exit"
 
-## Connect to the target throug the ST-Link programmer
+# Connect to the target in Debug mode
 connect:
-	$(OOCD) -c "debug_level 0; init; arm semihosting enable; reset run"
-
+	$(Q)$(OOCD) -f scripts/connect.ocd
 
 ## Start GDB debug session
 # Here we connect gdb and openocd via stdin-stdout pipe.
@@ -193,7 +200,7 @@ connect:
 # - start gdb and connect as: 'target extended-remote localhost:3333' or simply 'tar ext :3333'
 gdb: $(BUILD_DIR)/$(PROFILE)/$(TARGET).elf
 ifeq ("$(SEMIHOSTING)","1")
-	$(GDB) -ex 'target extended-remote | $(OOCD) -c "gdb_port pipe; init; arm semihosting enable; reset run"' $< ## halt
+	$(GDB) -ex 'target extended-remote | $(OOCD) -c "gdb_port pipe; init; arm semihosting enable; arm semihosting_fileio enable"' $<
 else
 	$(GDB) -ex 'target extended-remote | $(OOCD) -c "gdb_port pipe"' $<
 endif
@@ -202,7 +209,10 @@ endif
 ## Clean build directory for current profile and its build artefacts
 clean:
 	@echo Cleaning up...
-	-rm -rf $(OBJDIR) $(BUILD_DIR)/$(PROFILE)/$(TARGET).{elf,bin,hex}
+#	$(Q)-rm -rf $(BUILD_DIR)/$(PROFILE)/$(TARGET).{elf,bin,hex,map} ## DOESNT work
+	$(Q)-rm -rf $(OBJDIR)
+	$(Q)find  $(BUILD_DIR)/$(PROFILE) \( -name '$(TARGET).elf' -o -name '$(TARGET).bin' -o -name '$(TARGET).hex' -o -name '$(TARGET).map' \) \
+		-type f -exec rm {} +
 
 ## Remove everything created during builds
 tidy: clean
@@ -211,7 +221,7 @@ tidy: clean
 
 
 ## Build all
-target $(TARGET): libprintf $(BUILD_DIR)/$(PROFILE)/$(TARGET).bin $(BUILD_DIR)/$(PROFILE)/$(TARGET).hex
+target $(TARGET): $(BUILD_DIR)/$(PROFILE)/$(TARGET).bin $(BUILD_DIR)/$(PROFILE)/$(TARGET).hex #libprintf
 
 ## Alias for release build
 ## Catchall target. release-flash becomes make PROFILE=release flash
@@ -227,4 +237,5 @@ debug-%:
 
 all: | debug-$(TARGET) #release-$(TARGET) release-flash
 
-.PHONY: __DEFAULT libopencm3-docs flash gdb clean tidy $(TARGET) target release-% debug-% all connect
+.PHONY: __DEFAULT libopencm3-docs flash gdb clean tidy $(TARGET) target release-% debug-% all
+

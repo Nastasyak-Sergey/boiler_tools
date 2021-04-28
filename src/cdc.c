@@ -78,42 +78,39 @@ static enum usbd_request_return_codes cdcacm_control_request(
 //  TODO: TX Up to MAX_USB_PACKET_SIZE
 //  usbd_ep_write_packet(usbd_dev, DATA_IN, txbuf, txlen)
 
+
+
+
 static char cdcbuf[MAX_USB_PACKET_SIZE + 1];   // rx buffer
 
 /*
  * USB Receive Callback:
  */
-static void
-cdcacm_data_rx_cb(
-  usbd_device *usbd_dev,
-  uint8_t ep __attribute__((unused))
-) {
+static void cdcacm_data_rx_cb( usbd_device *usbd_dev,
+								uint8_t ep __attribute__((unused)))
+{
 	uint16_t len = usbd_ep_read_packet(usbd_dev, DATA_OUT, cdcbuf, MAX_USB_PACKET_SIZE);
     if (len == 0) { return; }
     uint16_t pos = (len < MAX_USB_PACKET_SIZE) ? len : MAX_USB_PACKET_SIZE;
     cdcbuf[pos] = 0;
 
 	usbd_ep_write_packet(usbd_dev, DATA_IN, cdcbuf, pos); ////  Echo the packet.
-	
-    printf("[ %s ] \n" ,cdcbuf);
+
+    printf("[ %s ]\n" , cdcbuf);
 }
 
-static void
-cdcacm_comm_cb(
-  usbd_device *usbd_dev,
-  uint8_t ep __attribute__((unused))
-) {
-	printf("comm\n");
+static void cdcacm_comm_cb(usbd_device *usbd_dev,
+							uint8_t ep __attribute__((unused)))
+{
+	printf("cdc comm \n");
 }
 
 /*
  * USB Configuration:
  */
-static void
-cdcacm_set_config(
-  usbd_device *usbd_dev,
-  uint16_t wValue __attribute__((unused))
-) {
+static void cdcacm_set_config( usbd_device *usbd_dev,
+								uint16_t wValue __attribute__((unused))) 
+{
 	//  From https://github.com/libopencm3/libopencm3-examples/blob/master/examples/stm32/f3/stm32f3-discovery/usb_cdcacm/cdcacm.c
     printf("*** cdcacm_set_config ***\n"); 
 	usbd_ep_setup(usbd_dev, DATA_OUT, USB_ENDPOINT_ATTR_BULK, MAX_USB_PACKET_SIZE, cdcacm_data_rx_cb);

@@ -23,6 +23,7 @@ void debug_print_char(char ch);
 void debug_print_float(float f);    //  Note: Always prints with 2 decimal places.
 void debug_flush(void);             //  Flush the buffer of the debug log so that buffered data will appear.
 
+extern void _putchar(char character);
 
 #ifdef __cplusplus
 }

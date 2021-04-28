@@ -20,8 +20,6 @@
 
 //Test USB MSC with RAM DISK emulation
 //uncoment statment below
-//#define RAM_DISK 
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -36,18 +34,16 @@
 #include "cdc.h"
 #include "msc.h"
 
-#include "winbond.h"
-
-#include "w25q_msc.h"
+//#include "winbond.h"
+//#include "w25q_msc.h"
 #include "ramdisk.h"
 
 #include "usb_conf.h"
 #include "libprintf/printf.h"
 
-static void set_aggregate_callback(
-  usbd_device *usbd_dev,
-  uint16_t wValue
-);
+#define RAM_DISK 1
+
+static void set_aggregate_callback(usbd_device *usbd_dev, uint16_t wValue);
 
 static char serial_number[USB_SERIAL_NUM_LENGTH+1];
 
@@ -55,8 +51,7 @@ static const char *usb_strings[] = {
     "Nast inc.",               //  USB Manufacturer
     "Data Logger",			   //  USB Product
     serial_number,             //  Serial number
-    //"Blue Pill DFU",         //  DFU
-    "NAS",                     //  DFU
+    "Black Pill DFU",         //  DFU
     "Black Pill MSC",           //  MSC
     "Black Pill Serial Port",   //  Serial Port
     "Black Pill COMM",          //  COMM
@@ -300,9 +295,10 @@ usbd_device* usbd_dev = NULL;
 
 usbd_device* usb_setup(void) {
     int num_strings = sizeof(usb_strings) / sizeof(const char*);
-    // debug_print("usb_setup num_strings "); debug_print_int(num_strings); debug_println("");
+//    printf("usb_setup num_strings %d \n", num_strings);
     const usbd_driver* driver = &st_usbfs_v1_usb_driver; //% target_usb_init(); function from bluepill-bootloader/src/stm32f103/target_stm32f103.c 
-    usbd_dev = usbd_init(driver, &dev, &config, 
+    
+	usbd_dev = usbd_init(driver, &dev, &config, 
         usb_strings, num_strings,
         usbd_control_buffer, sizeof(usbd_control_buffer));
 
@@ -323,7 +319,7 @@ usbd_device* usb_setup(void) {
     return usbd_dev;
 }
 
-#ifdef INTF_MSC    
+#ifdef INTF_MSC
 extern usbd_mass_storage *custom_usb_msc_init(usbd_device *usbd_dev,
 				 uint8_t ep_in, uint8_t ep_in_size,
 				 uint8_t ep_out, uint8_t ep_out_size,
@@ -334,20 +330,20 @@ extern usbd_mass_storage *custom_usb_msc_init(usbd_device *usbd_dev,
 				 int (*read_block)(uint32_t lba, uint8_t *copy_to),
 				 int (*write_block)(uint32_t lba, const uint8_t *copy_from),
 				 uint8_t msc_interface_index0);
-
+ 
 void msc_setup(usbd_device* usbd_dev0) {
     printf("msc_setup\n");
 #ifdef RAM_DISK
     ramdisk_init();
 #endif  //  RAM_DISK
-    
-    custom_usb_msc_init(usbd_dev0, MSC_IN, MAX_USB_PACKET_SIZE, MSC_OUT, MAX_USB_PACKET_SIZE, 
-        MSC_VENDOR_ID, MSC_PRODUCT_ID, MSC_PRODUCT_REVISION_LEVEL, 
-#ifdef RAM_DISK    
+
+    custom_usb_msc_init(INTF_MSC, MSC_IN, MAX_USB_PACKET_SIZE, MSC_OUT, MAX_USB_PACKET_SIZE, //  usbd_dev0
+        MSC_VENDOR_ID, MSC_PRODUCT_ID, MSC_PRODUCT_REVISION_LEVEL,
+#ifdef RAM_DISK
         ramdisk_blocks(), ramdisk_read, ramdisk_write,
 #else
         FLASH_MAX_BLOCKS, read_block, write_block,
-#endif  //  RAM_DISK        
+#endif
         INTF_MSC
     );
 }
@@ -447,9 +443,7 @@ static int aggregate_callback(
 	return USBD_REQ_NEXT_CALLBACK;
 }
 
-static void set_aggregate_callback(
-  usbd_device *usbd_dev,
-  uint16_t wValue) {
+static void set_aggregate_callback( usbd_device *usbd_dev, uint16_t wValue) {
     //  This callback is called when the device is updated.  We set our control callback.
     if (wValue != (uint16_t) -1) {  //  If this is an actual callback, not a call by usb_setup()...
         //  Call the config functions before setting our callback.
@@ -467,7 +461,9 @@ static void set_aggregate_callback(
         0,  //  Register for all notifications.
         0,
 		aggregate_callback);
-	if (status < 0) { printf("*** ERROR: set_aggregate_callback failed ***\n"); }  
+	if (status < 0) { 
+			printf("*** ERROR: set_aggregate_callback failed ***\n"); 
+	}  
 }
 
 

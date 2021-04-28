@@ -27,19 +27,16 @@
 #define USB_CONTROL_BUF_SIZE    256  //  Previously 1024
 #define MAX_USB_PACKET_SIZE     64   //  Previously 32
 
-//#define USB21_INTERFACE                       //  Enable USB 2.1 with WebUSB and BOS support.
-//#define ALL_USB_INTERFACES                    //  Enable all USB interfaces.
 
-#define STORAGE_AND_SERIAL_USB_INTERFACE  //  Enable only storage and serial USB interfaces.  No DFU.
+#define STORAGE_AND_SERIAL_USB_INTERFACE  //  Enable only storage and serial USB interfaces
 
-//  #define SERIAL_USB_INTERFACE              //  Enable only serial USB interface.  No DFU and storage.
+//#define SERIAL_USB_INTERFACE             //  Enable only serial USB interface.
 
 //  Index of each USB interface.  Must be consecutive and must sync with interfaces[].
 #ifdef ALL_USB_INTERFACES
-#define INTF_DFU                0
-#define INTF_MSC                1
-#define INTF_COMM               2
-#define INTF_DATA               3
+#define INTF_MSC                0
+#define INTF_COMM               1
+#define INTF_DATA               2
 #endif  //  ALL_USB_INTERFACES
 
 #ifdef STORAGE_AND_SERIAL_USB_INTERFACE
@@ -55,20 +52,12 @@
 
 //  USB Endpoints.
 #define MSC_OUT                 0x01
-#define DATA_OUT                0x03
-
 #define MSC_IN                  0x82
+
+#define DATA_OUT                0x03
 #define DATA_IN                 0x84
 #define COMM_IN                 0x85
 
-#ifdef NOTUSED
-#define DATA_IN                 0x82
-#define COMM_IN                 0x83
-#define MSC_IN                  0x84
-
-#define DATA_OUT                0x01
-#define MSC_OUT                 0x02
-#endif  //  NOTUSED
 
 void usb_set_serial_number(const char* serial);
 void target_get_serial_number(char* dest, size_t max_chars);

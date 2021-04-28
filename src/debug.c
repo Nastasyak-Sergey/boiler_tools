@@ -36,7 +36,7 @@ static int __semihost(int command, void* message) {
 	:  //  Clobbered register list:
 		"r0", "r1", "memory"
 	);
-	return 0;  //  TODO
+	return 0;
 }
 
 //  ARM Semihosting code from https://github.com/ARMmbed/mbed-os/blob/master/platform/mbed_semihost_api.c
