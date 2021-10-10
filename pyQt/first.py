@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QAction, QWidget,
 
 # Globals
 WIN_WITH, WIN_HEIGHT = 684, 400     # Window size
-SER_TIMEOUT = 0.1                   # Time out for serial RX
+SER_TIMEOUT = 0.3                   # Time out for serial RX
 RETURN_CHAR = "\n"                  # Char to be sent when Enter key pressed
 PASTE_CHAR = "\x16"                 # Ctrl code for clipboard paste
 baudrate = 115200                   # Default boudrate
@@ -185,7 +185,8 @@ class myWindow(QMainWindow):
 
     def syncTime(self):
         self.targretTime.setText('Synced')
-        self.serth.ser_out('$')
+        self.serth.ser_out('\xFE\x44\x00\x08\x02\x9F\x25')
+        time.sleep(1)
 
     def setPort(self, text):
         global portname

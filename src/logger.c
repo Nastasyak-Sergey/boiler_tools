@@ -55,6 +55,7 @@ static struct ds18b20 ts = {
 	.pin = DS18B20_GPIO_PIN,
 };
 
+
 static void show_temp(void) {
 //static void show_temp(void * param) {
 	unsigned long flags;
